@@ -21,4 +21,4 @@ class DiaryTest(object):
     def new_model(self, vo) -> object:
         return pd.read_csv(self.reader.new_file(vo))
 
-    
+
