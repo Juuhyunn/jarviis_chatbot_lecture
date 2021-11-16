@@ -1,108 +1,89 @@
-import time
-
-# Create your models here.
+from datetime import datetime
 import requests
 
-from common.models import ValueObject
-from bs4 import BeautifulSoup
-from selenium import webdriver
+# Create your tests here.
 
 
 class Weather(object):
     def __init__(self):
-        self.driver = webdriver.Chrome('common/data/chromedriver.exe')
+        pass
 
     def process(self):
-        vo = ValueObject()
-        # self.search_old(vo)
-        # return self.search_now(vo)
-        self.weather_api()
+        return self.weather_api()
 
     def weather_api(self):
-        url = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst'
-        params = {'serviceKey': '서비스키', 'pageNo': '1', 'numOfRows': '1000', 'dataType': 'XML', 'base_date': '20210628',
-                  'base_time': '0600', 'nx': '55', 'ny': '127'}
-
+        # 강남구 위경도
+        nx = 61
+        ny = 126
+        # 현재 시간
+        now = datetime.now()
+        base_date = f'{now.year}{now.month if now.month>9 else f"0{now.month}"}{now.day if now.day>9 else f"0{now.day}"}'
+        # 1일 총 8번 데이터가 업데이트 된다.(0200, 0500, 0800, 1100, 1400, 1700, 2000, 2300)
+        # 현재 api를 가져오려는 시점의 이전 시각에 업데이트된 데이터를 base_time, base_date로 설정
+        if now.hour < 2 or (now.hour == 2 and now.minute <= 10):  # 0시~2시 10분 사이
+            base_time = "2300"
+        elif now.hour < 5 or (now.hour == 5 and now.minute <= 10):  # 2시 11분~5시 10분 사이
+            base_time = "0200"
+        elif now.hour < 8 or (now.hour == 8 and now.minute <= 10):  # 5시 11분~8시 10분 사이
+            base_time = "0500"
+        elif now.hour <= 11 or now.minute <= 10:  # 8시 11분~11시 10분 사이
+            base_time = "0800"
+        elif now.hour < 14 or (now.hour == 14 and now.minute <= 10):  # 11시 11분~14시 10분 사이
+            base_time = "1100"
+        elif now.hour < 17 or (now.hour == 17 and now.minute <= 10):  # 14시 11분~17시 10분 사이
+            base_time = "1400"
+        elif now.hour < 20 or (now.hour == 20 and now.minute <= 10):  # 17시 11분~20시 10분 사이
+            base_time = "1700"
+        elif now.hour < 23 or (now.hour == 23 and now.minute <= 10):  # 20시 11분~23시 10분 사이
+            base_time = "2000"
+        else:  # 23시 11분~23시 59분
+            base_time = "2300"
+        url = 'http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst'
+        params = {'serviceKey': 'Azs8t5lc5MVlv67BnCCXpwjGc9eLdowYV2q3MZO0wqwOkWo3vpUP0PsHimKL0osXusxlIb+888C2E+PquYdixQ==',
+                  'pageNo': '1',
+                  'numOfRows': '10',
+                  'dataType': 'JSON',
+                  'base_date': base_date,
+                  'base_time': base_time,
+                  'nx': f'{nx}',
+                  'ny': f'{ny}'}
         response = requests.get(url, params=params)
-        print(response.content)
+        weather = response.json().get('response').get('body').get('items')
+        weather = list(weather.values())[0]
+        for i in weather:
+            if i['category'] == 'SKY':
+                sky = i
+            elif i['category'] == 'PTY':
+                pty = i
+        # print(f'SKY dict : {sky}')
+        # print(f'PTY dict : {pty}')
+        # print(f'SKY result : {sky["fcstValue"]}')
+        # print(f'PTY result : {pty["fcstValue"]}')
+        return self.sky_transfer(sky["fcstValue"]) if self.pty_transfer(pty["fcstValue"]) == '0' else self.pty_transfer(pty["fcstValue"])
 
-    def search_now(self, vo):
-        vo.context = 'api/weather/data/'
-        vo.url = 'https://www.weather.go.kr/w/index.do#'
-        driver = self.driver
-        driver.maximize_window()
-        driver.get(vo.url)
-        time.sleep(1)
-        search = driver.find_element_by_class_name('input')
-        search.clear()
-        search.send_keys("강남구")
-        time.sleep(1)
-        driver.find_element_by_css_selector("#index-local-search > div.cmp-local-search-items.on.opened > ul > li:nth-child(1) > a:nth-child(1)").click()
-        return self.crawling_now(driver)
+    # 하늘상태(SKY) 코드 : 맑음(1), 구름많음(3), 흐림(4)
+    def sky_transfer(self, sky):
+        if sky == '1':
+            return '맑음'
+        elif sky == '3':
+            return '구름 많음'
+        elif sky == '4':
+            return '흐림'
+        else:
+            return '데이터 없음'
 
-    def crawling_now(self, driver):
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        # weather = soup.find('span', {'class':'wic DB05 large'}).string
-        crawling = soup.find('div', {'class':'item-wrap'})
-        # location = soup.find_all('div', {'class':'serch-area accordionsecond-wrap'})
-        driver.close()
-        ls = []
-        [ls.append(i) for i in crawling.find('ul')]
-        weather = str(ls[3]).split('>')
-        weather = weather[4].split('<')
-        return weather[0]
+    # 강수형태(PTY) 코드 : (단기) 없음(0), 비(1), 비/눈(2), 눈(3), 소나기(4)
+    def pty_transfer(self, pty):
+        if pty == '0':
+            return '0'
+        elif pty == '1':
+            return '비'
+        elif pty == '2':
+            return '비, 눈'
+        elif pty == '3':
+            return '눈'
+        elif pty == '4':
+            return '소나기'
+        else:
+            return '데이터 없음'
 
-    def search_old(self, vo):
-        vo.context = 'api/weather/data/'
-        driver = webdriver.Chrome(f'{vo.context}/chromedriver.exe')
-        loc = "108"  # 서울
-        year = "2021"  # 년도
-        weather = self.crawing_weather(vo, loc, year, driver)
-        # cloud = self.crawing_cloud(vo, loc, year, driver)
-        self.weather_to_dict(weather)
-
-
-    def crawing_weather(self, vo, loc, year, driver):
-        weather_keyword = "obs=90&x=19&y=11"  # 비, 눈, 소나기 등
-        vo.url = f'http://web.kma.go.kr/weather/climate/past_table.jsp?stn={loc}&yy={year}&{weather_keyword}'
-        driver.maximize_window()
-        driver.get(vo.url)
-        time.sleep(3)
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        weather = soup.find_all('table', {'class': 'table_develop'})
-        driver.close()
-        # print(weather)
-        return weather
-
-    def crawing_cloud(self, vo, loc, year, driver):
-        cloud_keyword = "obs=59&x=25&y=9"  # 구름양
-        vo.url = f'http://web.kma.go.kr/weather/climate/past_table.jsp?stn={loc}&yy={year}&{cloud_keyword}'
-        driver.maximize_window()
-        driver.get(vo.url)
-        time.sleep(3)
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        cloud = soup.find_all('table', {'class': 'table_develop'})
-        driver.close()
-        # print(cloud)
-        return cloud
-
-    def weather_to_dict(self, weather):
-        month = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
-        ls = str(weather).split('td')
-        del ls[0]
-        for i, j in enumerate(ls):
-            ls[i] = j.replace('\n','')
-            ls[i] = ls[i].replace('>','')
-            ls[i] = ls[i].replace('<','')
-            ls[i] = ls[i].replace('/','')
-            ls[i] = ls[i].replace('\xa0','Unkown')
-            ls[i] = ls[i].replace('trtr','')
-            ls[i] = ls[i].replace('br',',')
-            ls[i] = ls[i].replace(' scope="row"','')
-        ls2 = []
-        [ls2.append(i) for i in ls if i != '']
-        del ls2[-1]
-        ls3 = [ls2[i:i+13] for i in range(0, len(ls2), 13)]
-        print(ls3)
-        dict = {h+i[0]:i[j+1] for j, h in enumerate(month) for i in ls3}
-        print(dict)

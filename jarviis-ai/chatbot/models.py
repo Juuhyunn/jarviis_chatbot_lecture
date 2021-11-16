@@ -160,5 +160,5 @@ if __name__=='__main__':
     # c.okt_execute()
     # c.komoran_execute()
     # c.komoran_execute_2()
-    # c.word2vec_execute()
-    c.n_gram_execute()
+    c.word2vec_execute()
+    # c.n_gram_execute()

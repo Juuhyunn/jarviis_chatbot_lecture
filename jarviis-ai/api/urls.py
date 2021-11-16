@@ -20,7 +20,6 @@ urlpatterns = [
     # path('admin/', admin.site.urls),
     path('api/userlog', include('userlog.urls')),
     path('api/weather', include('weather.urls')),
-    path('api/logdata', include('logdata.urls')),
     path('api/location', include('location.urls')),
     path('api/diary', include('diary.urls')),
 ]

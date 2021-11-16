@@ -34,7 +34,6 @@ INSTALLED_APPS = [
     'api',
     'common',
     'userlog',
-    'logdata',
     'location',
     'weather',
     'diary',

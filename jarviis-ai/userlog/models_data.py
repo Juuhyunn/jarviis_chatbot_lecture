@@ -4,29 +4,27 @@ import csv
 import sys
 
 from common.models import ValueObject, Reader, Printer
-from userlog.models import LogData
+from userlog.models import UserLog
+from userlog.models_process import LogData
 
 
-class DbUploader():
+class DbUploader:
     def __init__(self):
-        vo = ValueObject()
-        reader = Reader()
-        self.printer = Printer()
-        vo.context = 'userlog/data/'
-        vo.fname = 'logdata.csv'
-        self.csvfile = reader.new_file(vo)
+        pass
 
     def insert_data(self):
-        self.insert_logdata()
+        self.insert_userlog('1')
 
-    def insert_logdata(self):
-        with open(self.csvfile, newline='', encoding='utf8') as f:
-            data_reader = csv.DictReader(f)
-            for row in data_reader:
-                LogData.objects.create(location = row['location'],
-                                       gps = row['gps'],
-                                       log_type = row['log_type'],
-                                       contents = row['contents'],
-                                       item = row['item'])
+    def insert_userlog(self, user_id):
+        data = LogData().process()
+        UserLog.objects.create(location=data['location'],
+                               address=data['address'],
+                               x=data['x'],
+                               y=data['y'],
+                               weather=data['weather'],
+                               log_type=data['log_type'],
+                               contents=data['contents'],
+                               item=data['item'],
+                               user_id=user_id)
         print('LOG DATA UPLOADED SUCCESSFULY!')
 

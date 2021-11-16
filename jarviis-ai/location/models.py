@@ -1,41 +1,24 @@
-import csv
-import time
+
+from django.db import models
 
 # Create your models here.
-from common.models import ValueObject
-from bs4 import BeautifulSoup
-from selenium import webdriver
 
 
-class Location(object):
-    def __init__(self):
-        pass
+class LocationData(models.Model):
+    # location,category,address
+    location = models.TextField()
+    category = models.TextField()
+    address = models.TextField()
 
-    def process(self):
-        vo = ValueObject()
-        # self.crawling(vo)
-        self.save_csv(vo)
+    class Meta:
+        db_table = 'location'
 
-    def crawling(self, vo):
-        loc = '강남역'
-        vo.url = f'https://m.map.naver.com/search2/search.naver?query={loc}'
-        driver = webdriver.Chrome('common/data/chromedriver.exe')
-        driver.get(vo.url)
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        driver.close()
-        location = soup.find_all('div', {'class': 'item_info'})
-        ls = []
-        [ls.append([i.find('strong').text, i.find('em').text, i.find('p').text]) for i in location]
-        return ls
+    def __str__(self):
+        return f'{self.pk, self.location, self.category, self.address}'
 
-    def save_csv(self, vo):
-        vo.context = 'location/data/'
-        ls = self.crawling(vo)
-        # [print(i.find('strong').text) for i in location]
-        with open(f'{vo.context}location_data.csv', 'w', encoding='UTF-8') as f:
-            w = csv.writer(f)
-            w.writerow(['location','category','address'])
-            for i in ls:
-                w.writerow(i)
+    # def __str__(self):
+    #     return f'[{self.pk}] 위치 : {self.location},' \
+    #            f'카테고리 : {self.category},' \
+    #            f'주소 : {self.address}'
 
 
