@@ -1,11 +1,13 @@
 # https://jdh5202.tistory.com/850
-# from transformers import PreTrainedTokenizerFast, GPT2LMHeadModel
+from transformers import PreTrainedTokenizerFast, GPT2LMHeadModel
 import random
 import torch
 from torch.utils.data import DataLoader, Dataset  # 데이터로더
 from gluonnlp.data import SentencepieceTokenizer
-from NarrativeKoGPT2.model.torch_gpt2 import GPT2Config, GPT2LMHeadModel
-from NarrativeKoGPT2.util.data import NovelDataset
+#  numpy 설치 후 pip install --upgrade mxnet gluonnlp
+from transformers import GPT2Config
+# from transformers.configuration_gpt2 import GPT2Config
+
 import gluonnlp
 from tqdm import tqdm
 import subprocess
